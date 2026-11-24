@@ -1,6 +1,120 @@
-compile_flags.txt
-build/*
+# --- Rust / Cargo --------------------------------------------------------------
+# Cargo.lock IS committed: this is a binary crate and every build uses --locked.
 
-# Flatpak
+# cargo build output; build.sh also keeps target/home (a stand-in HOME on hosts
+# without one) and target/vendor-log here. The Docker builds use their own
+# volumes (luminance-rs-target-*), not this directory.
+/target/
+# target directory of builds made inside the Flatpak SDK
+/target-sdk/
+**/*.rs.bk
+*.pdb
+
+# crates vendored by `make vendor` / build.sh (cargo vendor, with vendor/.stamp)
+/vendor/
+
+# local cargo state (a CARGO_HOME inside the project, registry/git caches,
+# credentials); only the project's cargo config is committed
+
+# profiling and coverage output
+*.profraw
+*.profdata
+perf.data
+perf.data.old
+flamegraph.svg
+/coverage/
+lcov.info
+tarpaulin-report.html
+
+# --- Release packages (published as GitHub release files, not committed) -------
+
+# build.sh output: dist/*.deb, dist/*.flatpak and dist/windows/ (the Luminance/
+# application folder, the generated luminance.iss, setup .exe and portable .zip)
+/dist/
+
+# packages and installers wherever they end up (e.g. `make bundle` writes
+# luminance-rs.flatpak to the project root)
+*.deb
+*.ddeb
+*.rpm
+*.exe
+*.msi
+*.msix
+*.dmg
+*.AppImage
 *.flatpak
-.flatpak-manifest.yml
+*.flatpakref
+*.snap
+*.zip
+*.tar.gz
+*.tar.xz
+*.tar.zst
+
+# --- Flatpak -------------------------------------------------------------------
+# `make flatpak` / `make install` build in the project tree; build.sh keeps its
+# work directory in ~/.cache/luminance-rs/flatpak instead
+/build-dir/
+/.flatpak-builder/
+/flatpak-build/
+/flatpak-repo/
+/repo/
+
+# --- Windows packaging -----------------------------------------------------------
+# ffmpeg.exe / ffplay.exe downloaded by packaging/windows/get-ffmpeg.ps1
+/packaging/windows/ffmpeg/
+# make-ico.py, set-subsystem.py, msys2-fetch.py
+__pycache__/
+*.pyc
+
+# --- Local scratch and notes -----------------------------------------------------
+# reference files kept from the original C project (old PKGBUILD, submodule
+# list, ...) and other local scratch; kept on disk on purpose, never committed
+/.tmp/
+/tmp/
+/plan.txt
+/plan.md
+/notes.md
+/TODO.local.md
+# make-no-mistakes run state
+/.mnm/
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+
+# --- Editors and tools -----------------------------------------------------------
+.idea/
+*.iml
+.vscode/
+.fleet/
+.zed/
+.history/
+.claude/
+*.sublime-project
+*.sublime-workspace
+*~
+*.swp
+*.swo
+\#*\#
+.\#*
+.direnv/
+.envrc
+# --- Local secrets and environment ---------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+
+# --- Operating systems -------------------------------------------------------------
+.DS_Store
+._*
+.Spotlight-V100/
+.Trashes/
+.Trash-*/
+.directory
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/

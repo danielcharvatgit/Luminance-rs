@@ -1,7 +1,0 @@
-#ifndef MARGIN_UNIT
-#define MARGIN_UNIT 16
-#endif
-
-#ifndef MINIMUM_WINDOW_WIDTH
-#define MINIMUM_WINDOW_WIDTH 400
-#endif

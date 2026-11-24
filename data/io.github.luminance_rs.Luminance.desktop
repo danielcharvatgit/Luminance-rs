@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Luminance
+Comment=Control brightness of displays, including external DDC/CI monitors, and dim below the hardware minimum
+Icon=io.github.luminance_rs.Luminance
+Exec=luminance-rs
+Terminal=false
+Type=Application
+Keywords=Brightness;Display;Monitor;Screen;Backlight;Dim;DDC;
+Categories=GTK;Utility;Settings;HardwareSettings;
+StartupNotify=true

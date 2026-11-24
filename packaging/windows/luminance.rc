@@ -1,0 +1,28 @@
+// Executable icon and version info, compiled with windres by build-windows.sh.
+1 ICON "luminance.ico"
+
+1 VERSIONINFO
+FILEVERSION     @V1@,@V2@,@V3@,0
+PRODUCTVERSION  @V1@,@V2@,@V3@,0
+FILEOS          0x40004
+FILETYPE        0x1
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName", "Luminance-rs contributors"
+      VALUE "FileDescription", "Luminance - display brightness"
+      VALUE "FileVersion", "@VERSION@"
+      VALUE "InternalName", "luminance-rs"
+      VALUE "LegalCopyright", "GPL-3.0-only"
+      VALUE "OriginalFilename", "luminance-rs.exe"
+      VALUE "ProductName", "Luminance"
+      VALUE "ProductVersion", "@VERSION@"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

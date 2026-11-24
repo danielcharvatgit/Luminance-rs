@@ -1,6 +1,0 @@
-[submodule "arch"]
-	path = arch
-	url = https://aur.archlinux.org/luminance.git
-[submodule "flathub"]
-	path = flathub
-	url = https://github.com/flathub/com.sidevesh.Luminance.git

@@ -1,0 +1,49 @@
+app-id: io.github.luminance_rs.Luminance
+runtime: org.gnome.Platform
+runtime-version: '49'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: luminance-rs
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  # /dev/i2c-* for DDC/CI monitors (also covers GPU access)
+  - --device=all
+  # Built-in backlight through systemd-logind's Session.SetBrightness
+  - --system-talk-name=org.freedesktop.login1
+  # Laptop lid state
+  - --system-talk-name=org.freedesktop.UPower
+  # Software dimming on GNOME and Cinnamon (SetCrtcGamma)
+  - --talk-name=org.gnome.Mutter.DisplayConfig
+  - --talk-name=org.cinnamon.Muffin.DisplayConfig
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+modules:
+  - name: luminance-rs
+    buildsystem: simple
+    build-options:
+      env:
+        CARGO_NET_OFFLINE: 'true'
+    build-commands:
+      # Crates come from ./vendor (`cargo vendor`, see Makefile), no network needed.
+      - cargo --offline build --release --locked
+      - install -Dm755 target/release/luminance-rs -t /app/bin
+      - install -Dm644 data/${FLATPAK_ID}.desktop -t /app/share/applications
+      - install -Dm644 data/${FLATPAK_ID}.metainfo.xml -t /app/share/metainfo
+      - install -Dm644 data/${FLATPAK_ID}.service -t /app/share/dbus-1/services
+      - install -Dm644 data/icons/${FLATPAK_ID}.svg -t /app/share/icons/hicolor/scalable/apps
+      - install -Dm644 data/icons/${FLATPAK_ID}-symbolic.svg -t /app/share/icons/hicolor/symbolic/apps
+    sources:
+      - type: dir
+        path: ..
+        skip:
+          - target
+          - target-sdk
+          - .flatpak-builder
+          - build-dir
+          - tmp
+          - dist
+          - repo
+          - flatpak

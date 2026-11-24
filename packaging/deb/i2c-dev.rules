@@ -1,0 +1,3 @@
+# Luminance-rs: lets the logged-in user talk DDC/CI to external monitors
+# through /dev/i2c-* (same rule as ddcutil's).
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-[0-9]*", TAG+="uaccess"

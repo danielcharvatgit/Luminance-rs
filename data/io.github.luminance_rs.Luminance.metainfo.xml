@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.luminance_rs.Luminance</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>Luminance</name>
+  <developer id="io.github.luminance_rs">
+    <name>Luminance-rs contributors</name>
+  </developer>
+  <summary>Control brightness of displays</summary>
+  <description>
+    <p>A Rust port of Luminance: control the brightness of built-in and external displays (DDC/CI), with optional software dimming below the hardware minimum.</p>
+    <ul>
+      <li>Built-in panels through systemd-logind, no udev rules required</li>
+      <li>External monitors through DDC/CI, including contrast</li>
+      <li>Extra dimming below the minimum on GNOME, Cinnamon, KDE Plasma, Hyprland and other wlroots compositors</li>
+      <li>Command line and D-Bus interface for hotkeys</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.luminance_rs.Luminance.desktop</launchable>
+  <url type="vcs-browser">https://github.com/sidevesh/Luminance</url>
+  <content_rating type="oars-1.1"/>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <releases>
+    <release version="3.0.0" date="2026-11-24">
+      <description><p>Luminance-rs 3.0.0.</p></description>
+    </release>
+    <release version="2.1.0" date="2026-11-24">
+      <description><p>Windows support (installer and portable build) and a Debian package.</p></description>
+    </release>
+    <release version="2.0.0" date="2026-10-29">
+      <description><p>Rewrite in Rust with software dimming and Flatpak-friendly permissions.</p></description>
+    </release>
+  </releases>
+</component>

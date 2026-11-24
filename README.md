@@ -1,320 +1,257 @@
-<a name="readme-top"></a>
+# Luminance-rs
 
-<br />
-<div align="center">
-  <a href="https://github.com/sidevesh/Luminance">
-    <img src="icons/hicolor/scalable/apps/com.sidevesh.Luminance.svg" alt="Logo" width="120" height="120">
-  </a>
+A Rust port of [Luminance](https://github.com/sidevesh/Luminance), the GTK app
+for controlling the brightness of built-in and external (DDC/CI) displays. It
+adds **software dimming below the hardware minimum** and is built to run as a
+**Flatpak/deb** and **EXE**.
 
-<h3 align="center">Luminance</h3>
+## Features
 
-  <p align="center">
-    A simple GTK application to control brightness of displays including external displays supporting DDC/CI
-    <br />
-    <br />
-  </p>
-</div>
+- **Built-in panels** go through `systemd-logind` (`Session.SetBrightness`), so
+  no udev rule or `video` group is needed. The hardware never goes below ~1 %,
+  because 0 turns the backlight off on many laptops.
+- **External monitors** use DDC/CI over `/dev/i2c-*` (brightness and contrast).
+  There is a native Rust implementation, so libddcutil is not needed.
+- **Few dependencies.** Besides GTK 4 and libadwaita, the only crate is
+  `libc` (Linux only). The Wayland dimmer speaks the wire protocol directly
+  (`src/dim/wire.rs`) instead of using `wayland-client`, JSON is handled by a
+  small built-in module (`src/json.rs`) instead of `serde_json`, and the few
+  Win32 functions the Windows build needs are declared in `src/win32.rs`.
+- **Extra dimming below the minimum.** The bottom 25 % of every slider, left of
+  the mark, dims the picture in software while the backlight stays at its
+  minimum:
 
-<div align="center">
-  <img src="screenshots/screenshot-faded.png" alt="Screenshot">
-</div>
+  | Desktop | Method | Notes |
+  |---------|--------|-------|
+  | GNOME (Mutter, Wayland and X11) | `org.gnome.Mutter.DisplayConfig.SetCrtcGamma` | Keeps the current Night Light tint and re-applies itself if the settings daemon replaces the ramp |
+  | Cinnamon (Muffin, X11 and Wayland) | `org.cinnamon.Muffin.DisplayConfig.SetCrtcGamma` | Same as GNOME |
+  | Hyprland, Sway, river, … | `wlr-gamma-control` (gamma ramp) | Also dims the cursor. Falls back to the overlay if another tool (wlsunset, gammastep) holds the ramp |
+  | KDE Plasma (KWin) | `wlr-layer-shell` overlay, click-through | |
 
-## Install from Flathub
-<a href='https://flathub.org/apps/com.sidevesh.Luminance'>
-<img width='200' alt='Get it on Flathub' src='https://flathub.org/api/badge?locale=en'/>
-</a>
+  The darkest level can be set from 5 % to 50 % (**Menu → Darkest Level**). It
+  never goes fully black.
+- **Monitors without DDC/CI** (for example when there is no i2c access) still
+  get a software-dimming slider.
+- **Linked brightness**, an option to hide contrast controls, and an option to
+  hide the built-in display while the lid is closed (UPower).
+- **CLI** with an interactive terminal mode, xrandr-style options and the
+  original's options, plus a **D-Bus interface** compatible with the original
+  for hotkeys and OSD helpers.
 
-## Install from AUR (Arch Linux):
-  
-  ```
-  yay -S luminance
-  ```
+## Packages
 
-## Install deb package (Debian and Ubuntu based distros):
-Latest deb release is available on the releases page https://github.com/sidevesh/Luminance/releases
+`./build.sh` builds every release package into `dist/`:
 
-* Version 1.4.6 is the last supported version for Debian Bookworm or any other Debian based or Ubuntu 23.04 or older based distros that do not have atleast libddcutil5 (ddcutil 2.x), use 1.5.0 for distros newer than that
-* Version 1.0.4 is the last supported version for Ubuntu before 24.04, Debian or any other Debian based distro that does not have atleast libadwaita 1.5 version
-
-## Install rpm package (Fedora, OpenSUSE and other rpm based distros):
-Latest rpm release is available on the releases page https://github.com/sidevesh/Luminance/releases
-
-## Install from source
-
-### Dependencies
-- GTK 4.0
-- Libadwaita
-- ddcutil library package (typically libddcutil or libddcutil-dev if not already installed with ddcutil)
-- Make (Build tool)
-- Meson (Build tool)
-- Ninja (Build tool)
-- GCC (Compiler)
-
-### Steps
-1. Firstly, ensure that all the dependencies are installed:
-
-    ##### Arch Linux:
-    ```
-    pacman -S --needed make meson glib2-devel glib2 gtk4 libadwaita ddcutil
-    ```
-    
-    ##### Ubuntu-based distros (Ubuntu 24.04 or later, Debian Bookworm or later):
-    ```
-    sudo apt install make gcc meson libglib2.0-dev libgtk-4-dev libadwaita-1-dev libddcutil-dev
-    ```
-    ##### Fedora:
-    ```
-    sudo dnf install make gcc meson glib2-devel gtk4-devel libadwaita-devel libddcutil-devel
-    ```
-
-2. Ensure that your user has access to the i2c devices:
-https://www.ddcutil.com/i2c_permissions/
-
-3. Clone this repo:
-    ```
-    git clone https://github.com/sidevesh/Luminance.git
-    ```
-
-4. Change into the `Luminance` directory and build the application:
-    ```
-    cd Luminance
-    make
-    ```
-
-5. To install this binary for all users execute install command:
-    ```
-    make install
-    ```
-
-    You should now be able to find Luminance in your list of apps.
-    * Installing the application is necessary for it to work because it uses gsettings to store preferences and will need the schema files to be installed.
-    * Note: You might need to reload udev rules or reboot for brightness control permissions to take effect.
-
-
-### Development Build
-To build a development version (which installs as `com.sidevesh.Luminance.Devel` and allows side-by-side installation with the release version):
-
-```
-make install-debug
+```sh
+./build.sh            # all of them
+./build.sh exe deb    # or just some: exe, deb, flatpak
 ```
 
-### Flatpak
+| Package | File | Runs on |
+|---------|------|---------|
+| Windows installer | `dist/windows/Luminance-<version>-setup.exe` | Windows 10/11, x64 |
+| Windows portable | `dist/windows/Luminance-<version>-windows-x86_64.zip` | Windows 10/11, x64 |
+| Debian package | `dist/luminance-rs_<version>_amd64.deb` | Debian 13+, Ubuntu 25.04+ |
+| Flatpak | `dist/luminance-rs-<version>-x86_64.flatpak` | any distribution with Flatpak |
 
-To build the application as a Flatpak:
+The .exe and the .deb are built in Docker containers, so the host only needs
+Docker. The Windows build cross-compiles with llvm-mingw against GTK 4 and
+libadwaita from MSYS2, and the installer is made with Inno Setup under wine.
+`dist/windows/` also contains the application folder and `luminance.iss`, so
+the installer can be rebuilt on Windows with the Inno Setup Compiler. The
+Flatpak needs `org.flatpak.Builder` (see below).
 
-```
-make flatpak
-```
+Versions follow [Semantic Versioning](https://semver.org/). The version in
+`Cargo.toml` is the only place to change it; `build.sh` rejects anything that
+is not a semantic version. Debian packages turn a pre-release such as
+`2.2.0-rc.1` into `2.2.0~rc.1` so that it sorts before `2.2.0`.
 
-To install the locally built Flatpak:
+### Windows
 
-```
-make install-flatpak
-```
+- **Built-in displays** use the display driver's brightness interface
+  (`\\.\LCD`), or WMI when the driver has none.
+- **External monitors** use DDC/CI through the Windows Monitor Configuration
+  API. No drivers or administrator rights are needed.
+- **Extra dimming** uses the gamma ramp. Windows refuses ramps far from
+  neutral, so for deeper dimming Luminance switches to a click-through overlay
+  window. Setting the DWORD `GdiIcmGammaRange` to `256` under
+  `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ICM` lifts that limit.
+- Displays are named `DISPLAY1`, `DISPLAY2`, … as in Windows' display settings.
+- `luminance-rs-cli.exe` is the command line tool, with the same options as on
+  Linux. There is no D-Bus on Windows, so it controls the hardware directly:
+  values are hardware percentages, and software dimming is only available in
+  the app. The installer can add it to `PATH`.
+- Closing the window restores normal brightness. The lid option is not
+  available.
 
-To uninstall the locally built Flatpak:
+### Debian package
 
-```
-make uninstall-flatpak
-```
+Besides the program, the .deb installs a udev rule that gives the logged-in
+user access to `/dev/i2c-*` and loads the `i2c-dev` module at boot, so external
+monitors work right after installation without the steps under
+[Permissions](#permissions).
 
-To run the installed Flatpak with GDB for debugging:
+## Build and install the Flatpak
 
-```
-make run-flatpak
-```
+Requirements (one time):
 
-To create a standalone Flatpak bundle:
-
-```
-make flatpak-bundle
-```
-
-### Uninstall
-
-To uninstall the application, run the following from the build directory:
-
-```bash
-make uninstall
-```
-
-Or for the debug build:
-
-```bash
-make uninstall-debug
-```
-
-## Usage
-
-Start the application normally or you can also use the app via cli interface:
-```
-Usage: com.sidevesh.Luminance [OPTIONS]
-An application to control brightness of displays including external displays supporting DDC/CI
-
-Options:
-  -l, --list-displays                         List displays and their brightness
-  -g, --get-percentage [DISPLAY NUMBER]       Get the brightness percentage of a display
-  -s, --set-brightness [DISPLAY NUMBER]       Set the brightness of a display to a percentage value
-  -i, --increase-brightness [DISPLAY NUMBER]  Increase the brightness of a display by a percentage value
-  -d, --decrease-brightness [DISPLAY NUMBER]  Decrease the brightness of a display by a percentage value
-                                                - If DISPLAY NUMBER is not provided, the brightness of all displays will be changed
-      --get-contrast DISPLAY NUMBER            Get the contrast percentage of a DDC/CI display
-      --set-contrast [DISPLAY NUMBER]          Set the contrast of a DDC/CI display to a percentage value
-      --increase-contrast [DISPLAY NUMBER]     Increase the contrast of a DDC/CI display by a percentage value
-      --decrease-contrast [DISPLAY NUMBER]     Decrease the contrast of a DDC/CI display by a percentage value
-                                                - If DISPLAY NUMBER is not provided, the contrast of all DDC/CI displays will be changed
-  -p  --percentage [PERCENTAGE]               Percentage value for brightness or contrast operations
-  -h, --help                                  Show help information
-
-When no arguments are provided, the application starts in GUI mode.
+```sh
+flatpak install flathub org.gnome.Sdk//49 org.gnome.Platform//49 \
+    org.freedesktop.Sdk.Extension.rust-stable//25.08 org.flatpak.Builder
 ```
 
-## GNOME Extension
+Then:
 
-A companion GNOME Shell extension is available for Luminance. This extension displays the native GNOME brightness OSD (On-Screen Display) when brightness is adjusted outside of the main GUI application window (e.g. via command line interface or D-Bus calls).
-
-### Install from GNOME Shell Extensions
-Available at [GNOME Shell Extensions](https://extensions.gnome.org/extension/9579/luminance-extension/).
-
-### Install from Release
-Latest extension release is available on the releases page https://github.com/sidevesh/Luminance/releases
-Download the zip file and install it using `gnome-extensions install [ZIP_FILE]`.
-
-### Install from Source
-To build and install the extension from source:
-```bash
-make install-gnome-extension
+```sh
+make install    # vendors crates (cargo vendor) and builds + installs the Flatpak
+make bundle     # optional: single-file luminance-rs.flatpak to copy elsewhere
+flatpak run io.github.luminance_rs.Luminance
 ```
 
-After installation, you may need to restart GNOME Shell (Alt+F2, type `r`, enter on X11, or log out/in on Wayland) and enable the extension:
-```bash
-gnome-extensions enable luminance-extension@sidevesh
+The Flatpak build itself is offline. `make vendor` puts all crates into
+`vendor/`, and `.cargo/config.toml` points cargo at them. You need the system
+`cargo` only for that vendoring step.
+
+## Permissions
+
+All of these are in the manifest by default and can be changed in **Flatseal**:
+
+| Permission | Used for |
+|------------|----------|
+| `--share=ipc`, `--socket=fallback-x11` | The window in X11 sessions |
+| `--socket=wayland` | Software dimming on Hyprland/Sway/KDE (protocol objects on its own Wayland connection) |
+| `--talk-name=org.gnome.Mutter.DisplayConfig` | Software dimming on GNOME |
+| `--talk-name=org.cinnamon.Muffin.DisplayConfig` | Software dimming on Cinnamon |
+| `--system-talk-name=org.freedesktop.login1` | Built-in backlight |
+| `--system-talk-name=org.freedesktop.UPower` | Lid state |
+| `--device=all` | `/dev/i2c-*` for DDC/CI monitors |
+
+Built-in displays and software dimming need **no host changes**. External
+monitors over DDC/CI are the one exception, because Flatpak cannot load kernel
+modules or change device permissions on the host. They need the `i2c-dev`
+module and access to `/dev/i2c-*`. Many distributions already provide this
+through the `ddcutil` package's udev rule. Otherwise:
+
+```sh
+sudo modprobe i2c-dev
+echo i2c-dev | sudo tee /etc/modules-load.d/i2c-dev.conf
+sudo usermod -aG i2c $USER   # or install ddcutil for its uaccess udev rule
 ```
 
-## Note for Maintainers
+The app finds this problem by itself, shows a banner and gives the exact
+commands under **Menu → Permissions Help**. Until access is fixed, those
+monitors still get software dimming.
 
-### Release Workflow
+## Command line
 
-The release process involves updating the version, tagging/pushing the main application, and then updating downstream packagers (Arch/Flathub).
+`luminance-rs --help` lists every option. Inside Flatpak, prefix commands with
+`flatpak run io.github.luminance_rs.Luminance` (shortened to `luminance` below).
 
-1.  **Update Version & Changelog**:
-    *   Update `version.txt` with the new version number.
-    *   Update `releases.xml` using the script:
-        ```bash
-        ./scripts/generate-releases.sh
-        ```
-    *   **Commit these changes** to the main repository.
-
-2.  **Tag and Push Main Repo**:
-    *   **Important**: Flathub and Arch builds rely on the tag existing on GitHub.
-    *   **Sync Tags**: First, ensure you have all tags from GitHub (in case releases were created there).
-        ```bash
-        git pull --tags
-        ```
-    *   **Create Tag**: You can create the release tag (e.g., `1.4.4`) either locally or by drafting a release on GitHub.
-        *   **Locally**:
-            ```bash
-            git tag 1.4.4
-            git push origin main --tags
-            ```
-        *   **GitHub**: Go to Releases -> Draft a new release -> Create new tag -> Publish.
-
-3.  **Update Arch (Direct Push)**:
-    *   Run packaging script: `make package-arch`
-    *   Go into `arch/`, commit changes, and push to AUR (master branch is allowed).
-    *   Go back to root, commit the `arch` submodule change, and push.
-
-4.  **Update Flathub (PR Workflow)**:
-    **Note**: Direct push to Flathub `master` is **not allowed**. You must use a Pull Request.
-    
-    *   **Preparation**:
-        ```bash
-        cd flathub
-        git checkout master
-        git pull
-        git checkout -b update-to-1.4.4  # Create a new branch
-        cd ..
-        ```
-    *   **Generate Manifest**:
-        ```bash
-        make package-flatpak-flathub
-        ```
-    *   **Commit and Push Branch**:
-        ```bash
-        cd flathub
-        git add .
-        git commit -m "Update to 1.4.4"
-        git push -u origin update-to-1.4.4
-        ```
-    *   **Open PR**: Go to the Flathub repository URL and open a Pull Request from `update-to-1.4.4` to `master`.
-    *   **Cleanup**: Once the PR is merged, you can pull the latest `master` in the `flathub` directory and commit that pointer to the main repo if you wish to keep it in sync.
-
-### Note for AUR publishers
-
-Switch the `arch` submodule push url to the ssh url before pushing to AUR for the first time:
-```bash
-cd arch
-git remote set-url --push origin ssh://aur@aur.archlinux.org/luminance.git
+```sh
+luminance --cli                                  # interactive: pick a display, adjust it
+luminance --list-displays --verbose              # also: -q, --listmonitors, --json
+luminance --output DP-2 --brightness 30          # set; also +10 / -10
+luminance --noninteractive --output eDP-1 --brightness -10 --contrast 70
+luminance --brightness 10 --dryrun               # show what would change
+luminance --set-brightness 1 -p 60               # original Luminance options
+luminance --decrease-brightness -p 5             # all displays
 ```
 
-### Note for Flathub publishers
+- **Modes:** with no options the GUI starts. `--cli` runs a line-based
+  terminal interface (works over ssh and with piped input). `--noninteractive`
+  never prompts or opens the GUI, and fails when it is given nothing to do.
+- **Displays** (`--output`, repeatable) can be a number from the list, a
+  connector (`eDP-1`, `DP-2`) or the monitor name, case-insensitive. Without
+  `--output` all displays change.
+- **Values** are 0-100, with an optional `%`. `+N`/`-N` change the current
+  value. Values outside 0-100, `nan`, unknown options, repeated options and
+  conflicting combinations are rejected with exit status 2.
+- **xrandr-style extras:** `--verbose`, `--dryrun`, `--current` (use the
+  service's cached values instead of re-reading the hardware), `-v/--version`.
+- The original options still work: `-l -g -s -i -d -p` and
+  `--get/set/increase/decrease-contrast`.
 
-Switch the `flathub` submodule push url to the ssh url before pushing to Flathub for the first time:
-```bash
-cd flathub
-git remote set-url --push origin git@github.com:flathub/com.sidevesh.Luminance.git
+Brightness values use the slider scale, so values below 25 dim in software.
+Commands run in the background service, which is started through D-Bus
+activation and stays alive while software dimming is active. If the service
+can't be reached, the CLI controls the hardware directly (hardware percentages,
+no software dimming). **Quit** (Ctrl+Q) restores normal brightness.
+
+Example hotkeys:
+
+```ini
+# Hyprland
+bind = , XF86MonBrightnessDown, exec, flatpak run io.github.luminance_rs.Luminance -d -p 5
+bind = , XF86MonBrightnessUp,   exec, flatpak run io.github.luminance_rs.Luminance -i -p 5
 ```
 
-### Flatpak Build Prerequisites
-1.  Install `flatpak`.
-2.  Install `flatpak-builder` (It is recommended to use the flatpak version of the builder):
-    ```bash
-    flatpak install -y flathub org.flatpak.Builder
-    ```
-3.  Install the required GNOME Runtime and SDK:
-    ```bash
-    flatpak install org.gnome.Platform//49 org.gnome.Sdk//49
-    ```
+## D-Bus
 
-### Build and Install Locally
-To build and install the Flatpak locally for testing:
-```bash
-make install-flatpak
+Bus name and interface `io.github.luminance_rs.Luminance`, object
+`/io/github/luminance_rs/Luminance/Service`:
+`GetMonitors() → s (JSON)`, `SetBrightness(s id, d value)`,
+`SetBrightnessQuiet(s, d)`, `SetContrast(s, d)`, `Refresh()`, `Quit()`, and
+the signals `ShowOSD(d, s)` and `ShowContrastOSD(d, s)`.
+
+`GetMonitors` returns an array of objects with the keys `id`, `name`,
+`brightness` (slider scale), `has_contrast`, `contrast` (`-1` when
+unsupported), `connector` (`null` when unknown), `kind` (`backlight`, `ddc` or
+`software`) and `software_dim` (1.0 = not dimmed).
+
+The `Set*` methods take the `id` from `GetMonitors` (a string such as `"0"`)
+and a value in percent: brightness on the slider scale (as `brightness`),
+contrast in percent of the monitor's range. Values outside 0-100 are clamped; an unknown id, NaN or infinity is rejected with
+`org.freedesktop.DBus.Error.InvalidArgs`. `SetBrightness` and `SetContrast`
+also emit the OSD signal, `SetBrightnessQuiet` does not.
+
+For example:
+
+```sh
+gdbus call --session --dest io.github.luminance_rs.Luminance \
+    --object-path /io/github/luminance_rs/Luminance/Service \
+    --method io.github.luminance_rs.Luminance.SetBrightness "'0'" 40
 ```
 
-### Validate (Lint)
-To validate the manifest and repository against Flathub requirements:
-```bash
-make lint-flatpak-flathub
+## Development
+
+```sh
+cargo run       # needs GTK 4.14+ and libadwaita 1.6+ development files
+cargo test      # or: make test
+cargo clippy --all-targets -- -D warnings
 ```
 
-### Run the Application (with Debugging)
-```bash
-make run-flatpak
+Building needs `pkg-config` plus the GTK 4 and libadwaita development
+packages (on Debian/Ubuntu: `libgtk-4-dev libadwaita-1-dev`). No Wayland
+development files are needed. Cargo uses the crates in `vendor/` (see
+`.cargo/config.toml`); run `make vendor` (or any `./build.sh` target) after
+changing dependencies.
+
+Without those packages on the host, use the Debian image that `./build.sh deb`
+builds (`luminance-rs-build-deb`); the repository is mounted read-only and the
+build goes to a Docker volume:
+
+```sh
+docker run --rm -v "$PWD:/src:ro" -v luminance-rs-target-dev:/target \
+    -e CARGO_TARGET_DIR=/target -w /src luminance-rs-build-deb \
+    cargo test --offline --locked
 ```
 
-### Creating a Bundle
-To create a binary bundle `.flatpak` for distribution:
-```bash
-make flatpak-bundle
-```
+That image has no clippy; add it in the container with
+`rustup component add clippy` before running `cargo clippy`. The Windows code
+(`#[cfg(windows)]`) can be type-checked the same way with
+`luminance-rs-build-windows` and
+`cargo build --offline --locked --target x86_64-pc-windows-gnullvm`.
 
+The unit tests cover option parsing, JSON, the Wayland wire format, EDID and
+the brightness/dimming arithmetic. Anything that talks to hardware, the
+compositor or D-Bus is not covered and has to be tried on a real session.
+
+Settings are stored in `~/.config/luminance-rs/settings.ini`. Inside Flatpak
+that is `~/.var/app/io.github.luminance_rs.Luminance/config/luminance-rs/`, and
+on Windows `%LOCALAPPDATA%\luminance-rs\settings.ini`. Invalid values there
+fall back to the defaults, and `dim-floor` is limited to 0.05-0.50.
 
 ## License
 
-Distributed under the GNU General Public License v3.0. See `LICENSE.txt` for more information.
-
-
-
-## Contact
-
-Swapnil Devesh - [@sid_devesh](https://twitter.com/sid_devesh) - me@sidevesh.com
-
-Project Link: [https://github.com/sidevesh/Luminance](https://github.com/sidevesh/Luminance)
-
-
-
-## Acknowledgments
-
-- @rockowitz : for ddcutil c api: https://github.com/rockowitz/ddcutil
-- @jimmac : for the awesome icon: https://github.com/jimmac
+GPL-3.0-only, like the original. Icons are from the original Luminance
+project.

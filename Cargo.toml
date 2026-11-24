@@ -1,0 +1,23 @@
+[package]
+name = "luminance-rs"
+version = "3.0.0"
+edition = "2021"
+license = "GPL-3.0-only"
+description = "Control brightness of built-in and external (DDC/CI) displays, with software dimming below the hardware minimum"
+rust-version = "1.85"
+
+[[bin]]
+name = "luminance-rs"
+path = "src/main.rs"
+
+[dependencies]
+gtk = { package = "gtk4", version = "0.11", features = ["v4_14"] }
+adw = { package = "libadwaita", version = "0.9", features = ["v1_6"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
